@@ -2,7 +2,7 @@
 import datetime
 from homeassistant.const import Platform
 
-DOMAIN = "vakio"
+DOMAIN = "vakio_smart_control"
 
 # Platform
 PLATFORMS = [

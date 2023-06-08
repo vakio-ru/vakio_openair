@@ -47,6 +47,9 @@ class MqttBroker:
             return False
 
         return True
+    
+    async def get_condition(self) -> dict(str, Any):
+        
 
 
 class Coordinator(DataUpdateCoordinator):
@@ -70,3 +73,14 @@ class Coordinator(DataUpdateCoordinator):
 
     async def _async_update(self, now: datetime) -> None:
         """Register in hass, sensors and devices"""
+        update: bool = False
+        if self.lastUpdate == None:
+            self.lastUpdate = now
+            update = True
+        diff = now - self.lastUpdate
+        if diff > timedelta(seconds=2):
+            self.lastUpdate = now
+            update = True
+        if not update:
+            return
+        self.condition = await self.hass.async_add_executor_job(self.api.Condition)

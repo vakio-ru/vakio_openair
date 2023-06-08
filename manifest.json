@@ -8,7 +8,7 @@
   "dependencies": [
     "mqtt"
   ],
-  "documentation": "https://www.home-assistant.io/integrations/vakio",
+  "documentation": "https://github.com/Anti-Shperml/vakio-smart-control/blob/main/README.md",
   "homekit": {},
   "iot_class": "cloud_polling",
   "requirements": [],
