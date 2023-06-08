@@ -22,12 +22,13 @@ from .const import (
     ERROR_AUTH,
     ERROR_CONFIG_NO_TREADY,
 )
-from .vakio import MqttBroker
+from .vakio import MqttBroker, Coordinator
 
 PLATFORMS: list[Platform] = []
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
+
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the demo environment."""
@@ -53,20 +54,25 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     # Data refresh
     # TODO refresh
-    # await coordinator.async_config_entry_first_refresh()
-    # if not coordinator.last_update_success:
-    #     raise ConfigEntryNotReady(ERROR_CONFIG_NO_TREADY)
+    coordinator = Coordinator(hass, data)
+    await coordinator.async_config_entry_first_refresh()
+    if not coordinator.last_update_success:
+        raise ConfigEntryNotReady(ERROR_CONFIG_NO_TREADY)
 
     # Registration of integration in HA
     hass.data[DOMAIN][config_entry.entry_id] = coordinator
     config_entry.add_update_listener(async_reload_entry)
-    config_entry.async_on_unload(config_entry.add_update_listener(config_entry_update_listener))
+    config_entry.async_on_unload(
+        config_entry.add_update_listener(config_entry_update_listener)
+    )
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
-async def config_entry_update_listener(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+async def config_entry_update_listener(
+    hass: HomeAssistant, config_entry: ConfigEntry
+) -> None:
     """Функция вызывается при обновлении конфигурации."""
     await hass.config_entries.async_reload(config_entry.entry_id)
 
@@ -82,7 +88,9 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         unload_ok = all(
             await asyncio.gather(
                 *[
-                    hass.config_entries.async_forward_entry_unload(config_entry, platform)
+                    hass.config_entries.async_forward_entry_unload(
+                        config_entry, platform
+                    )
                     for platform in PLATFORMS
                 ]
             )
