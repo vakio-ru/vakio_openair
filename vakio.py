@@ -1,5 +1,6 @@
 """Service classes for interacting with Vakio devices"""
 from __future__ import annotations
+import asyncio
 from collections.abc import Awaitable, Callable, Coroutine
 from datetime import timedelta, datetime, timezone
 import time
@@ -21,6 +22,7 @@ from .const import (
     CONF_PORT,
     CONF_TOPIC,
     CONF_USERNAME,
+    CONNECTION_TIMEOUT,
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -55,6 +57,7 @@ class MqttBroker:
 
     async def connect(self) -> bool:
         """Connect with the broker."""
+        global status
         status = None
 
         def on_connect(client, userdata, flags, rc):
@@ -62,19 +65,24 @@ class MqttBroker:
             status = True if rc == 0 else False
 
         self.client.on_connect = on_connect
-        self.client.connect(self.data[CONF_HOST], self.data[CONF_PORT])
-        self.client.loop_start()
-        while status is None:
-            time.sleep(0.1)
+        try:
+            self.client.connect(self.data[CONF_HOST], self.data[CONF_PORT])
+        except Exception:  # pylint: disable=broad-exception-caught
+            return False
 
-        return status
+        # self.client.loop_start()
+
+        # while status is None:
+        #     time.sleep(0.5)
+
+        return status if status is not None else True
         # try:
         #     self.client.connect(self.data[CONF_HOST], self.data[CONF_PORT])
         # except:  # pylint: disable=bare-except
         #     return False
         # return True
 
-    def get_condition(self, coordinator: Coordinator) -> dict(str, Any):
+    async def get_condition(self, coordinator: Coordinator) -> dict(str, Any):
         """Getting condition of device"""
 
         def on_message(client, userdata, message: mqtt.MQTTMessage):
@@ -87,9 +95,8 @@ class MqttBroker:
 
         self.client.on_message = on_message
         self.client.subscribe(
-            [(self.data[CONF_TOPIC] + "/" + endpoint) for endpoint in self.ENDPOINTS]
+            [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in self.ENDPOINTS]
         )
-        _LOGGER.info()
 
 
 class Coordinator(DataUpdateCoordinator):
