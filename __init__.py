@@ -52,8 +52,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if not await broker.try_connect():
         raise ConfigEntryAuthFailed(ERROR_AUTH)
 
-    # Data refresh
-    # TODO refresh
     coordinator = Coordinator(hass, data)
     await coordinator.async_config_entry_first_refresh()
     if not coordinator.last_update_success:

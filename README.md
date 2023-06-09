@@ -1,2 +1,2 @@
 # vakio
- Vacio integration for Home Assistant
+ Vakio integration for Home Assistant
