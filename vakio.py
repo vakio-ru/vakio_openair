@@ -2,6 +2,7 @@
 from __future__ import annotations
 from collections.abc import Awaitable, Callable, Coroutine
 from datetime import timedelta, datetime, timezone
+import time
 
 import logging
 import random
@@ -15,6 +16,11 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .const import (
     DEFAULT_TIMEINTERVAL,
     DOMAIN,
+    CONF_HOST,
+    CONF_PASSWORD,
+    CONF_PORT,
+    CONF_TOPIC,
+    CONF_USERNAME,
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -35,7 +41,9 @@ class MqttBroker:
         self.client_id = f"python-mqtt-{random.randint(0, 1000)}"
         self.client = mqtt.Client(client_id=self.client_id)
         if len(self.data.keys()) == 5:
-            self.client.username_pw_set(self.data["username"], self.data["password"])
+            self.client.username_pw_set(
+                self.data[CONF_USERNAME], self.data[CONF_PASSWORD]
+            )
 
     async def try_connect(self) -> bool:
         """Try to create connection with the broker."""
@@ -47,12 +55,24 @@ class MqttBroker:
 
     async def connect(self) -> bool:
         """Connect with the broker."""
-        try:
-            self.client.connect(self.data["host"], self.data["port"])
-        except:  # pylint: disable=bare-except
-            return False
+        status = None
 
-        return True
+        def on_connect(client, userdata, flags, rc):
+            global status
+            status = True if rc == 0 else False
+
+        self.client.on_connect = on_connect
+        self.client.connect(self.data[CONF_HOST], self.data[CONF_PORT])
+        self.client.loop_start()
+        while status is None:
+            time.sleep(0.1)
+
+        return status
+        # try:
+        #     self.client.connect(self.data[CONF_HOST], self.data[CONF_PORT])
+        # except:  # pylint: disable=bare-except
+        #     return False
+        # return True
 
     def get_condition(self, coordinator: Coordinator) -> dict(str, Any):
         """Getting condition of device"""
@@ -67,7 +87,7 @@ class MqttBroker:
 
         self.client.on_message = on_message
         self.client.subscribe(
-            [(self.data["topic"] + "/" + endpoint) for endpoint in self.ENDPOINTS]
+            [(self.data[CONF_TOPIC] + "/" + endpoint) for endpoint in self.ENDPOINTS]
         )
         _LOGGER.info()
 
