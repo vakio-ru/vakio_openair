@@ -21,10 +21,10 @@ from .const import (
     DOMAIN,
     ERROR_AUTH,
     ERROR_CONFIG_NO_TREADY,
+    PLATFORMS,
 )
 from .vakio import MqttBroker, Coordinator
 
-PLATFORMS: list[Platform] = []
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)

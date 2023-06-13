@@ -6,7 +6,8 @@ DOMAIN = "vakio_smart_control"
 
 # Platform
 # PLATFORMS = [Platform.SENSOR, Platform.FAN]
-PLATFORMS = [Platform.SENSOR, Platform.CLIMATE]
+# PLATFORMS = [Platform.CLIMATE]
+PLATFORMS = [Platform.FAN, Platform.CLIMATE]
 
 # Default consts.
 DEFAULT_PORT = 1883
@@ -38,7 +39,6 @@ OPENAIR_SPEED_03 = 3
 OPENAIR_SPEED_04 = 4
 OPENAIR_SPEED_05 = 5
 OPENAIR_SPEED_LIST = [
-    OPENAIR_SPEED_00,
     OPENAIR_SPEED_01,
     OPENAIR_SPEED_02,
     OPENAIR_SPEED_03,

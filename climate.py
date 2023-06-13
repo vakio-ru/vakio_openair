@@ -41,10 +41,11 @@ async def async_setup_platform(
                 preset_modes=["home", "eco"],
                 current_temperature=22,
                 fan_mode="On High",
-                target_humidity=None,
-                current_humidity=None,
+                target_humidity=50,
+                current_humidity=70,
                 swing_mode="Off",
                 hvac_mode=HVACMode.FAN_ONLY,
+                
                 hvac_action=None,
                 aux=None,
                 target_temp_high=None,
@@ -124,7 +125,7 @@ class DemoClimate(ClimateEntity):
         self._current_swing_mode = swing_mode
         self._fan_modes = ["on_low", "on_high", "auto_low", "auto_high", "off"]
         self._hvac_modes = hvac_modes
-        self._swing_modes = ["auto", "1", "2", "3", "off"]
+        self._swing_modes = ["auto", "1", "2", "3", "4", "off"]
         self._target_temperature_high = target_temp_high
         self._target_temperature_low = target_temp_low
 
