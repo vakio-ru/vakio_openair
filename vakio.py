@@ -47,12 +47,11 @@ class MqttBroker:
         self.client_id = f"python-mqtt-{random.randint(0, 1000)}"
         self.client = mqtt.Client(client_id=self.client_id)
         self._coordinator = coordinator
+        self.is_run = False
         if len(self.data.keys()) == 5:
             self.client.username_pw_set(
                 self.data[CONF_USERNAME], self.data[CONF_PASSWORD]
             )
-
-    def on_message():
 
     async def try_connect(self) -> bool:
         """Try to create connection with the broker."""
@@ -64,36 +63,48 @@ class MqttBroker:
 
     async def connect(self) -> bool:
         """Connect with the broker."""
-        global status
         status = None
-
-        def on_connect(client, userdata, flags, rc):
-            global status
-            status = True if rc == 0 else False
-
-        self.client.on_connect = on_connect
-        try:
-            self.client.connect(self.data[CONF_HOST], self.data[CONF_PORT])
-        except Exception:  # pylint: disable=broad-exception-caught
-            return False
-
-        return status if status is not None else True
-
-    async def get_condition(self, coordinator: Coordinator) -> dict(str, Any):
-        """Get condition of device"""
 
         def on_message(client, userdata, message: mqtt.MQTTMessage):
             key = str.split(message.topic, "/")[-1]
             value = message.payload.decode()
-            coordinator.condition[key] = value
-            _LOGGER.info(
-                print(f"{k}: {val}") for k, val in coordinator.condition.items()
+            self._coordinator.condition[key] = value
+            _LOGGER.error(
+                (f"{k}: {val}") for k, val in self._coordinator.condition.items()
             )
 
+        def on_connect(client, userdata, flags, rc):
+            _LOGGER.error("It's works!")
+            # status = True if rc == 0 else False
+            self.client.subscribe(
+                [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in ENDPOINTS]
+            )
+
+        self.client.on_connect = on_connect
         self.client.on_message = on_message
-        self.client.subscribe(
-            [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in ENDPOINTS]
-        )
+        try:
+            self.client.connect(self.data[CONF_HOST], self.data[CONF_PORT])
+            self.client.loop_start()
+            return True
+        except Exception:  # pylint: disable=broad-exception-caught
+            return False
+
+        # return status if status is not None else True
+
+    async def get_condition(
+        self,
+    ) -> dict(str, Any):
+        """Get condition of device"""
+
+        # if not self.is_run:
+        #     self.client.on_message = on_message
+        #     self.client.subscribe(
+        #         [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in ENDPOINTS]
+        #     )
+
+        # else:
+        #     return coordinator.condition
+        return self._coordinator.condition
 
     def publish(self, endpoint: str, msg: str) -> bool:
         """Publish commands to topic"""
@@ -128,7 +139,7 @@ class Coordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> bool:
         """Get all data"""
-        await self.broker.get_condition(self)
+        await self.broker.get_condition()
 
     def speed(self, value: int | None = None) -> int | bool | None:
         """Speed of fan"""
