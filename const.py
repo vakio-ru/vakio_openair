@@ -6,8 +6,7 @@ DOMAIN = "vakio_smart_control"
 
 # Platform
 # PLATFORMS = [Platform.SENSOR, Platform.FAN]
-# PLATFORMS = [Platform.CLIMATE]
-PLATFORMS = [Platform.FAN, Platform.CLIMATE]
+PLATFORMS = [Platform.FAN]
 
 # Default consts.
 DEFAULT_PORT = 1883

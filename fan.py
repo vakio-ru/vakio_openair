@@ -57,7 +57,7 @@ async def async_setup_platform(
     info: DiscoveryInfoType | None = None,
 ) -> bool:
     openair = VakioOpenAirFan(
-        hass, "fan1", "OpenAir", conf.entry_id, LIMITED_SUPPORT, PRESET_MODS
+        hass, "openair1", "OpenAir", conf.entry_id, LIMITED_SUPPORT, PRESET_MODS
     )
     entities([openair])
     return True

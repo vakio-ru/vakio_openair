@@ -29,7 +29,7 @@ from .const import (
     CONF_PASSWORD,
     CONF_TOPIC,
 )
-from .vakio import MqttBroker
+from .vakio import MqttClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ async def validate_input(
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-    broker = MqttBroker(data)
+    broker = MqttClient(hass, data)
 
     if not await broker.try_connect():
         raise InvalidAuth

@@ -23,7 +23,7 @@ from .const import (
     ERROR_CONFIG_NO_TREADY,
     PLATFORMS,
 )
-from .vakio import MqttBroker, Coordinator
+from .vakio import MqttClient, Coordinator
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
@@ -46,7 +46,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     for key, value in config_entry.data.items():
         data[key] = value
 
-    broker = MqttBroker(data)
+    broker = MqttClient(hass, data)
 
     # Try to connect
     if not await broker.try_connect():

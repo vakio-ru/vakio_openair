@@ -1,17 +1,12 @@
 """Service classes for interacting with Vakio devices"""
 from __future__ import annotations
 import asyncio
-from collections.abc import Awaitable, Callable, Coroutine
-from datetime import timedelta, datetime, timezone
-import time
-
 import logging
 import random
 from typing import Any
 import paho.mqtt.client as mqtt
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
@@ -22,7 +17,6 @@ from .const import (
     CONF_PORT,
     CONF_TOPIC,
     CONF_USERNAME,
-    CONNECTION_TIMEOUT,
     OPENAIR_STATE_OFF,
     OPENAIR_STATE_ON,
 )
@@ -36,60 +30,93 @@ WORKMODE_ENDPOINT = "endpoint"
 ENDPOINTS = [SPEED_ENDPOINT, GATE_ENDPOINT, STATE_ENDPOINT, WORKMODE_ENDPOINT]
 
 
-class MqttBroker:
-    """MqttBroker class for connecting to a broker."""
+class MqttClient:
+    """MqttClient class for connecting to a broker."""
 
     def __init__(
-        self, data: dict(str, Any), coordinator: Coordinator | None = None
+        self,
+        hass: HomeAssistant,
+        data: dict(str, Any),
+        coordinator: Coordinator | None = None,
     ) -> None:
         """Initialize."""
+        self.hass = hass
         self.data = data
+
         self.client_id = f"python-mqtt-{random.randint(0, 1000)}"
-        self.client = mqtt.Client(client_id=self.client_id)
+        self._client = mqtt.Client(client_id=self.client_id)
+        self._client.on_connect = self.on_connect
+        self._client.on_message = self.on_message
+
         self._coordinator = coordinator
         self.is_run = False
         if len(self.data.keys()) == 5:
-            self.client.username_pw_set(
+            self._client.username_pw_set(
                 self.data[CONF_USERNAME], self.data[CONF_PASSWORD]
             )
 
-    async def try_connect(self) -> bool:
-        """Try to create connection with the broker."""
-        result = False
-        if await self.connect():
-            self.client.disconnect()
-            result = True
-        return result
+        self._paho_lock = asyncio.Lock()  # Prevents parallel calls to the MQTT client
+        self.is_connected = False
+
+    def on_message(self, client, userdata, message: mqtt.MQTTMessage):
+        """Callback on message"""
+        key = str.split(message.topic, "/")[-1]
+        value = message.payload.decode()
+        self._coordinator.condition[key] = value
+        _LOGGER.error((f"{k}: {val}") for k, val in self._coordinator.condition.items())
+
+    def on_connect(self, client, userdata, flags, rc):  # pylint: disable=invalid-name
+        """Callback on connect"""
+        self.is_connected = True
+        _LOGGER.error("It's works!")
+        if self._coordinator is not None:
+            self.hass.async_add_executor_job(
+                self._client.subscribe,
+                [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in ENDPOINTS],
+            )
+            # self._client.subscribe(
+            #     [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in ENDPOINTS]
+            # )
+        else:
+            raise Exception()
 
     async def connect(self) -> bool:
         """Connect with the broker."""
-        status = None
-
-        def on_message(client, userdata, message: mqtt.MQTTMessage):
-            key = str.split(message.topic, "/")[-1]
-            value = message.payload.decode()
-            self._coordinator.condition[key] = value
-            _LOGGER.error(
-                (f"{k}: {val}") for k, val in self._coordinator.condition.items()
-            )
-
-        def on_connect(client, userdata, flags, rc):
-            _LOGGER.error("It's works!")
-            # status = True if rc == 0 else False
-            self.client.subscribe(
-                [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in ENDPOINTS]
-            )
-
-        self.client.on_connect = on_connect
-        self.client.on_message = on_message
         try:
-            self.client.connect(self.data[CONF_HOST], self.data[CONF_PORT])
-            self.client.loop_start()
+            await self.hass.async_add_executor_job(
+                self._client.connect, self.data[CONF_HOST], self.data[CONF_PORT]
+            )
+            self._client.loop_start()
             return True
-        except Exception:  # pylint: disable=broad-exception-caught
-            return False
+        except OSError as err:
+            _LOGGER.error("Failed to connect to MQTT server due to exception: %s", err)
 
-        # return status if status is not None else True
+        return False
+
+    async def disconnect(self) -> None:
+        """Disconnect from the broker"""
+
+        def stop() -> None:
+            """Stop the MQTT client."""
+            # Do not disconnect, we want the broker to always publish will
+            self._client.loop_stop()
+
+        # TODO: unsubscribe all
+
+        async with self._paho_lock:
+            self.is_connected = False
+            await self.hass.async_add_executor_job(stop)
+            self._client.disconnect()
+
+    async def try_connect(self) -> bool:
+        """Try to create connection with the broker."""
+        self._client.on_connect = None
+
+        try:
+            self._client.connect(self.data[CONF_HOST], self.data[CONF_PORT])
+            return True
+        except Exception:
+            return False
 
     async def get_condition(
         self,
@@ -110,7 +137,7 @@ class MqttBroker:
         """Publish commands to topic"""
         topic = self.data[CONF_TOPIC] + "/" + endpoint
 
-        pub_status = self.client.publish(topic, msg)[0]
+        pub_status = self._client.publish(topic, msg)[0]
         return True if pub_status == 0 else False
 
 
@@ -122,7 +149,7 @@ class Coordinator(DataUpdateCoordinator):
             hass, _LOGGER, name=DOMAIN, update_interval=DEFAULT_TIMEINTERVAL
         )
         self._data = data
-        self.broker = MqttBroker(data, self)
+        self.mqttc = MqttClient(self.hass, data, self)
         self.last_update = None
         self.condition = {
             GATE_ENDPOINT: None,
@@ -132,42 +159,43 @@ class Coordinator(DataUpdateCoordinator):
         }
 
     async def async_login(self) -> bool:
-        status = await self.broker.connect()
+        """"""
+        status = await self.mqttc.connect()
         if not status:
             _LOGGER.error("Auth error")
         return status
 
     async def _async_update_data(self) -> bool:
         """Get all data"""
-        await self.broker.get_condition()
+        await self.mqttc.get_condition()
 
     def speed(self, value: int | None = None) -> int | bool | None:
         """Speed of fan"""
         if value is None:
             return self.condition[SPEED_ENDPOINT]
 
-        return self.broker.publish(SPEED_ENDPOINT, value)
+        return self.mqttc.publish(SPEED_ENDPOINT, value)
 
     def gate(self, value: int | None = None) -> int | bool | None:
         """Gate of device"""
         if value is None:
             return self.condition[GATE_ENDPOINT]
 
-        return self.broker.publish(GATE_ENDPOINT, value)
+        return self.mqttc.publish(GATE_ENDPOINT, value)
 
     def state(self, value: str | None = None) -> str | bool | None:
         """State of device"""
         if value is None:
             return self.condition[STATE_ENDPOINT]
 
-        return self.broker.publish(STATE_ENDPOINT, value)
+        return self.mqttc.publish(STATE_ENDPOINT, value)
 
     def workmode(self, value: str | None = None) -> str | bool | None:
         """Workmode of device: manual or super_auto"""
         if value is None:
             return self.condition[WORKMODE_ENDPOINT]
 
-        return self.broker.publish(WORKMODE_ENDPOINT, value)
+        return self.mqttc.publish(WORKMODE_ENDPOINT, value)
 
     def turn_on(self) -> bool:
         """Turn on the device"""
