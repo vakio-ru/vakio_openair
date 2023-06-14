@@ -40,7 +40,7 @@ FULL_SUPPORT = (
     | FanEntityFeature.PRESET_MODE
 )
 LIMITED_SUPPORT = FanEntityFeature.SET_SPEED | FanEntityFeature.PRESET_MODE
-PRESET_MODS = ["Off", "Gate 1,", "Gate 2", "Gate 3", "Gate 4", "Super Auto"]
+PRESET_MODS = ["Off", "Gate 1", "Gate 2", "Gate 3", "Gate 4", "Super Auto"]
 
 
 async def async_setup_entry(
@@ -60,6 +60,8 @@ async def async_setup_platform(
         hass, "openair1", "OpenAir", conf.entry_id, LIMITED_SUPPORT, PRESET_MODS
     )
     entities([openair])
+    coordinator: Coordinator = hass.data[DOMAIN][conf.entry_id]
+    async_track_time_interval(hass, coordinator._async_update, timedelta(seconds=5))
     return True
 
 

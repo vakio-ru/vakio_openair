@@ -168,6 +168,14 @@ class Coordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> bool:
         """Get all data"""
         await self.mqttc.get_condition()
+        return True
+
+    async def _async_update(self, now) -> None:
+        """
+        Функция регистритуется в hass, во всех датчиках и устройствах и контролирует
+        обновление данных через API не чаще чем раз в 2 секунды.
+        """
+        await self.mqttc.get_condition()
 
     def speed(self, value: int | None = None) -> int | bool | None:
         """Speed of fan"""
