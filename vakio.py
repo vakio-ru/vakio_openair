@@ -4,10 +4,13 @@ import asyncio
 import logging
 import random
 from typing import Any
+import async_timeout
 import paho.mqtt.client as mqtt
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+from homeassistant.loader import bind_hass
 
 from .const import (
     DEFAULT_TIMEINTERVAL,
@@ -26,7 +29,7 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 SPEED_ENDPOINT = "speed"
 GATE_ENDPOINT = "gate"
 STATE_ENDPOINT = "state"
-WORKMODE_ENDPOINT = "endpoint"
+WORKMODE_ENDPOINT = "workmode"
 ENDPOINTS = [SPEED_ENDPOINT, GATE_ENDPOINT, STATE_ENDPOINT, WORKMODE_ENDPOINT]
 
 
@@ -50,6 +53,7 @@ class MqttClient:
 
         self._coordinator = coordinator
         self.is_run = False
+        self.subscribes_count = 0
         if len(self.data.keys()) == 5:
             self._client.username_pw_set(
                 self.data[CONF_USERNAME], self.data[CONF_PASSWORD]
@@ -61,24 +65,21 @@ class MqttClient:
     def on_message(self, client, userdata, message: mqtt.MQTTMessage):
         """Callback on message"""
         key = str.split(message.topic, "/")[-1]
+        self._client.unsubscribe(topic=message.topic)
         value = message.payload.decode()
+        if value is not None:
+            try:
+                value = int(value)
+            except ValueError:
+                pass
+
         self._coordinator.condition[key] = value
-        _LOGGER.error((f"{k}: {val}") for k, val in self._coordinator.condition.items())
+        for k, val in self._coordinator.condition.items():
+            _LOGGER.error("%s: %s", k, val)
 
     def on_connect(self, client, userdata, flags, rc):  # pylint: disable=invalid-name
         """Callback on connect"""
         self.is_connected = True
-        _LOGGER.error("It's works!")
-        if self._coordinator is not None:
-            self.hass.async_add_executor_job(
-                self._client.subscribe,
-                [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in ENDPOINTS],
-            )
-            # self._client.subscribe(
-            #     [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in ENDPOINTS]
-            # )
-        else:
-            raise Exception()
 
     async def connect(self) -> bool:
         """Connect with the broker."""
@@ -118,27 +119,33 @@ class MqttClient:
         except Exception:
             return False
 
+    async def subscribe(self) -> None:
+        self.subscribes_count += 1
+        async with self._paho_lock:
+            result, mid = await self.hass.async_add_executor_job(
+                self._client.subscribe,
+                [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in ENDPOINTS],
+            )
+        for endpoint in ENDPOINTS:
+            _LOGGER.debug("Subscribe to %s, mid: %s, qos: %s", endpoint, mid, 0)
+
     async def get_condition(
         self,
     ) -> dict(str, Any):
         """Get condition of device"""
-
-        # if not self.is_run:
-        #     self.client.on_message = on_message
-        #     self.client.subscribe(
-        #         [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in ENDPOINTS]
-        #     )
-
-        # else:
-        #     return coordinator.condition
+        await self.subscribe()
         return self._coordinator.condition
 
-    def publish(self, endpoint: str, msg: str) -> bool:
+    async def publish(self, endpoint: str, msg: str) -> bool:
         """Publish commands to topic"""
         topic = self.data[CONF_TOPIC] + "/" + endpoint
 
-        pub_status = self._client.publish(topic, msg)[0]
-        return True if pub_status == 0 else False
+        async with self._paho_lock:
+            msg_info = await self.hass.async_add_executor_job(
+                self._client.publish, topic, msg
+            )
+
+        return True
 
 
 class Coordinator(DataUpdateCoordinator):
@@ -161,6 +168,7 @@ class Coordinator(DataUpdateCoordinator):
     async def async_login(self) -> bool:
         """"""
         status = await self.mqttc.connect()
+        await self.mqttc.subscribe()
         if not status:
             _LOGGER.error("Auth error")
         return status
@@ -177,51 +185,67 @@ class Coordinator(DataUpdateCoordinator):
         """
         await self.mqttc.get_condition()
 
-    def speed(self, value: int | None = None) -> int | bool | None:
+    async def speed(self, value: int | None = None) -> int | bool | None:
         """Speed of fan"""
         if value is None:
             return self.condition[SPEED_ENDPOINT]
 
-        return self.mqttc.publish(SPEED_ENDPOINT, value)
+        return await self.mqttc.publish(SPEED_ENDPOINT, value)
 
-    def gate(self, value: int | None = None) -> int | bool | None:
+    async def gate(self, value: int | None = None) -> int | bool | None:
         """Gate of device"""
         if value is None:
             return self.condition[GATE_ENDPOINT]
 
-        return self.mqttc.publish(GATE_ENDPOINT, value)
+        return await self.mqttc.publish(GATE_ENDPOINT, value)
 
-    def state(self, value: str | None = None) -> str | bool | None:
+    async def state(self, value: str | None = None) -> str | bool | None:
         """State of device"""
         if value is None:
             return self.condition[STATE_ENDPOINT]
 
-        return self.mqttc.publish(STATE_ENDPOINT, value)
+        return await self.mqttc.publish(STATE_ENDPOINT, value)
 
-    def workmode(self, value: str | None = None) -> str | bool | None:
+    async def workmode(self, value: str | None = None) -> str | bool | None:
         """Workmode of device: manual or super_auto"""
         if value is None:
             return self.condition[WORKMODE_ENDPOINT]
 
-        return self.mqttc.publish(WORKMODE_ENDPOINT, value)
+        return await self.mqttc.publish(WORKMODE_ENDPOINT, value)
 
-    def turn_on(self) -> bool:
+    def get_speed(self) -> int | bool | None:
+        """Speed of fan"""
+        return self.condition[SPEED_ENDPOINT]
+
+    def get_gate(self) -> int | bool | None:
+        """Gate of device"""
+        return self.condition[GATE_ENDPOINT]
+
+    def get_state(self, value: str | None = None) -> str | bool | None:
+        """State of device"""
+        return self.condition[STATE_ENDPOINT]
+
+    def get_workmode(self, value: str | None = None) -> str | bool | None:
+        """Workmode of device: manual or super_auto"""
+        return self.condition[WORKMODE_ENDPOINT]
+
+    async def turn_on(self) -> bool:
         """Turn on the device"""
-        current_state = self.state()
+        current_state = self.get_state()
         if current_state == OPENAIR_STATE_OFF or current_state is None:
-            return self.state(OPENAIR_STATE_ON)
+            return await self.state(OPENAIR_STATE_ON)
 
         return False
 
-    def turn_off(self) -> bool:
+    async def turn_off(self) -> bool:
         """Turn off the device"""
-        current_state = self.state()
+        current_state = self.get_state()
         if current_state == OPENAIR_STATE_ON or current_state is None:
-            return self.state(OPENAIR_STATE_OFF)
+            return await self.state(OPENAIR_STATE_OFF)
 
         return False
 
     def is_on(self) -> bool:
         """Check is device on"""
-        current_state = self.state()
+        current_state = self.get_state()
         return current_state == OPENAIR_STATE_ON

@@ -1,5 +1,6 @@
 """123"""
 from __future__ import annotations
+import asyncio
 import decimal
 from typing import Any, Optional
 import logging
@@ -61,7 +62,8 @@ async def async_setup_platform(
     )
     entities([openair])
     coordinator: Coordinator = hass.data[DOMAIN][conf.entry_id]
-    async_track_time_interval(hass, coordinator._async_update, timedelta(seconds=5))
+    await coordinator.async_login()
+    async_track_time_interval(hass, coordinator._async_update, timedelta(seconds=2))
     return True
 
 
@@ -140,16 +142,16 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
         """Установка скорости работы вентиляции в процентах."""
         self._percentage = percentage
         if percentage == 0:
-            self.coordinator.turn_off()
+            await self.coordinator.turn_off()
             self.update_all_options()
             return
-        self.coordinator.turn_on()
+        await self.coordinator.turn_on()
         # Получение именованой скорости.
         speed: decimal.Decimal = percentage_to_ordered_list_item(
             OPENAIR_SPEED_LIST, percentage
         )
         # Выполнение метода API установки скорости.
-        self.coordinator.speed(speed)
+        await self.coordinator.speed(speed)
         if self.update_speed():
             self.update_all_options()
 
@@ -180,7 +182,7 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
         **kwargs: Any,
     ) -> None:
         """Включение вентиляционной системы."""
-        self.coordinator.turn_on()
+        await self.coordinator.turn_on()
         # Получение именованой скорости.
         new_speed: decimal.Decimal = 0
         if percentage is not None:
@@ -188,12 +190,12 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
         else:
             new_speed = OPENAIR_SPEED_01
 
-        self.coordinator.speed(new_speed)
+        await self.coordinator.speed(new_speed)
         self.update_all_options()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Выключение вентиляционной системы."""
-        self.coordinator.turn_off()
+        await self.coordinator.turn_off()
         await self._async_update(datetime.now(timezone.utc))
 
     async def _async_update(self, now: datetime) -> None:
@@ -217,7 +219,7 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
         Обновление текущей скорости работы вентиляционной системы.
         Возвращается "истина" если было выполнено обновление.
         """
-        speed: int | None = self.coordinator.speed()
+        speed: int | None = self.coordinator.get_speed()
         if (
             speed is None or speed > len(OPENAIR_SPEED_LIST) or speed == 0
         ) and self._percentage is not None:
