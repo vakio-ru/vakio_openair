@@ -231,19 +231,11 @@ class Coordinator(DataUpdateCoordinator):
 
     async def turn_on(self) -> bool:
         """Turn on the device"""
-        current_state = self.get_state()
-        if current_state == OPENAIR_STATE_OFF or current_state is None:
-            return await self.state(OPENAIR_STATE_ON)
-
-        return False
+        return await self.state(OPENAIR_STATE_ON)
 
     async def turn_off(self) -> bool:
         """Turn off the device"""
-        current_state = self.get_state()
-        if current_state == OPENAIR_STATE_ON or current_state is None:
-            return await self.state(OPENAIR_STATE_OFF)
-
-        return False
+        return await self.state(OPENAIR_STATE_OFF)
 
     def is_on(self) -> bool:
         """Check is device on"""

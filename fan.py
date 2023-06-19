@@ -63,7 +63,7 @@ async def async_setup_platform(
     entities([openair])
     coordinator: Coordinator = hass.data[DOMAIN][conf.entry_id]
     await coordinator.async_login()
-    async_track_time_interval(hass, coordinator._async_update, timedelta(seconds=2))
+    async_track_time_interval(hass, coordinator._async_update, timedelta(seconds=3))
     return True
 
 
