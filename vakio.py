@@ -30,7 +30,16 @@ SPEED_ENDPOINT = "speed"
 GATE_ENDPOINT = "gate"
 STATE_ENDPOINT = "state"
 WORKMODE_ENDPOINT = "workmode"
-ENDPOINTS = [SPEED_ENDPOINT, GATE_ENDPOINT, STATE_ENDPOINT, WORKMODE_ENDPOINT]
+TEMP_ENDPOINT = "temp"
+HUD_ENDPOINT = "hud"
+ENDPOINTS = [
+    SPEED_ENDPOINT,
+    GATE_ENDPOINT,
+    STATE_ENDPOINT,
+    WORKMODE_ENDPOINT,
+    TEMP_ENDPOINT,
+    HUD_ENDPOINT,
+]
 
 
 class MqttClient:
@@ -74,8 +83,8 @@ class MqttClient:
                 pass
 
         self._coordinator.condition[key] = value
-        for k, val in self._coordinator.condition.items():
-            _LOGGER.error("%s: %s", k, val)
+        # for k, val in self._coordinator.condition.items():
+        #     _LOGGER.error("%s: %s", k, val)
 
     def on_connect(self, client, userdata, flags, rc):  # pylint: disable=invalid-name
         """Callback on connect"""
@@ -99,10 +108,7 @@ class MqttClient:
 
         def stop() -> None:
             """Stop the MQTT client."""
-            # Do not disconnect, we want the broker to always publish will
             self._client.loop_stop()
-
-        # TODO: unsubscribe all
 
         async with self._paho_lock:
             self.is_connected = False
@@ -139,10 +145,11 @@ class MqttClient:
     async def publish(self, endpoint: str, msg: str) -> bool:
         """Publish commands to topic"""
         topic = self.data[CONF_TOPIC] + "/" + endpoint
-
+        qos = 0
+        retain = True
         async with self._paho_lock:
             msg_info = await self.hass.async_add_executor_job(
-                self._client.publish, topic, msg
+                self._client.publish, topic, msg, qos, retain
             )
 
         return True
@@ -163,14 +170,20 @@ class Coordinator(DataUpdateCoordinator):
             SPEED_ENDPOINT: None,
             WORKMODE_ENDPOINT: None,
             STATE_ENDPOINT: None,
+            TEMP_ENDPOINT: None,
+            HUD_ENDPOINT: None,
         }
+        self.is_logged_in = False
 
     async def async_login(self) -> bool:
-        """"""
+        if self.is_logged_in is True:
+            return True
+
         status = await self.mqttc.connect()
         await self.mqttc.subscribe()
         if not status:
             _LOGGER.error("Auth error")
+        self.is_logged_in = True
         return status
 
     async def _async_update_data(self) -> bool:
@@ -228,6 +241,12 @@ class Coordinator(DataUpdateCoordinator):
     def get_workmode(self, value: str | None = None) -> str | bool | None:
         """Workmode of device: manual or super_auto"""
         return self.condition[WORKMODE_ENDPOINT]
+
+    def get_temp(self) -> int | bool | None:
+        return self.condition[TEMP_ENDPOINT]
+
+    def get_hud(self) -> int | bool | None:
+        return self.condition[HUD_ENDPOINT]
 
     async def turn_on(self) -> bool:
         """Turn on the device"""

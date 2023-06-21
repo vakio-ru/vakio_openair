@@ -4,8 +4,6 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from homeassistant import config_entries, setup
-from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     Platform,
@@ -32,7 +30,7 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the demo environment."""
-    _LOGGER.info("Function __init__.async_setup() called.")
+    _LOGGER.info("Function __init__.async_setup() called")
 
     return True
 
@@ -95,8 +93,10 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         )
     if unload_ok:
         hass.data[DOMAIN].pop(config_entry.entry_id)
-        _LOGGER.info(
-            f"Координатор Coordinator() домена {DOMAIN} удалён, entry_id: {config_entry.entry_id}."
+        _LOGGER.debug(
+            "Координатор Coordinator() домена %s удалён, entry_id: %s",
+            DOMAIN,
+            config_entry.entry_id,
         )
 
     return unload_ok
