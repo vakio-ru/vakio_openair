@@ -158,11 +158,17 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Установка скорости работы вентиляции в процентах."""
+        current_workmode = self.coordinator.get_workmode()
+
+        if current_workmode == OPENAIR_WORKMODE_SUPERAUTO:
+            self._percentage = self.coordinator.get_speed()
+            return self.async_write_ha_state()
+
         self._percentage = percentage
         if percentage == 0:
             await self.coordinator.speed(0)
-            self.update_all_options()
-            return
+            return self.update_all_options()
+
         await self.coordinator.turn_on()
         # Получение именованой скорости.
         speed: decimal.Decimal = percentage_to_ordered_list_item(

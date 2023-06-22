@@ -1,6 +1,7 @@
 """Service classes for interacting with Vakio devices"""
 from __future__ import annotations
 import asyncio
+import json
 import logging
 import random
 from typing import Any
@@ -22,6 +23,8 @@ from .const import (
     CONF_USERNAME,
     OPENAIR_STATE_OFF,
     OPENAIR_STATE_ON,
+    OPT_SMART_TOPIC_PREFIX,
+    OPT_SMART_TOPIC_ENDPOINT,
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -142,9 +145,12 @@ class MqttClient:
         await self.subscribe()
         return self._coordinator.condition
 
-    async def publish(self, endpoint: str, msg: str) -> bool:
+    async def publish(self, endpoint: str, msg: str, prefix: str = None) -> bool:
         """Publish commands to topic"""
         topic = self.data[CONF_TOPIC] + "/" + endpoint
+        if prefix is not None:
+            topic = prefix + "/" + topic
+
         qos = 0
         retain = True
         async with self._paho_lock:
@@ -234,11 +240,11 @@ class Coordinator(DataUpdateCoordinator):
         """Gate of device"""
         return self.condition[GATE_ENDPOINT]
 
-    def get_state(self, value: str | None = None) -> str | bool | None:
+    def get_state(self) -> str | bool | None:
         """State of device"""
         return self.condition[STATE_ENDPOINT]
 
-    def get_workmode(self, value: str | None = None) -> str | bool | None:
+    def get_workmode(self) -> str | bool | None:
         """Workmode of device: manual or super_auto"""
         return self.condition[WORKMODE_ENDPOINT]
 
@@ -260,3 +266,17 @@ class Coordinator(DataUpdateCoordinator):
         """Check is device on"""
         current_state = self.get_state()
         return current_state == OPENAIR_STATE_ON
+
+    async def update_smart_mode(self, emerg_hunt: int, gate: int, speed: int) -> None:
+        """Изменение параметров режима SMART"""
+        command = {
+            "settings": [
+                {"gate": gate},
+                {"smart_speed": speed},
+                {"emerg_shunt": emerg_hunt},
+            ]
+        }
+        command_json = json.dumps(command)
+        await self.mqttc.publish(
+            OPT_SMART_TOPIC_ENDPOINT, command_json, OPT_SMART_TOPIC_PREFIX
+        )

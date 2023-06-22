@@ -12,6 +12,9 @@ PLATFORMS = [Platform.FAN, Platform.SENSOR]
 DEFAULT_PORT = 1883
 DEFAULT_TOPIC = "vakio"
 DEFAULT_TIMEINTERVAL = datetime.timedelta(seconds=5)
+DEFAULT_SMART_GATE = 4
+DEFAULT_SMART_SPEED = 5
+DEFAULT_SMART_EMERG_SHUNT = 10
 
 # CONF consts.
 CONF_HOST = "host"
@@ -19,6 +22,14 @@ CONF_PORT = "port"
 CONF_USERNAME = "username"
 CONF_PASSWORD = "password"
 CONF_TOPIC = "topic"
+
+# OPT consts
+OPT_EMERG_SHUNT = "emerg_shunt"
+OPT_SMART_SPEED = "smart_speed"
+OPT_SMART_GATE = "gate"
+OPT_SMART_TOPIC_PREFIX = "server"
+OPT_SMART_TOPIC_ENDPOINT = "openair/mode"
+
 
 # Errors.
 ERROR_AUTH: str = "ошибка аутентификации"

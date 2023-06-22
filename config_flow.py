@@ -7,7 +7,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.selector import (
@@ -23,13 +23,19 @@ from .const import (
     DOMAIN,
     DEFAULT_PORT,
     DEFAULT_TOPIC,
+    DEFAULT_SMART_GATE,
+    DEFAULT_SMART_SPEED,
+    DEFAULT_SMART_EMERG_SHUNT,
     CONF_HOST,
     CONF_PORT,
     CONF_USERNAME,
     CONF_PASSWORD,
     CONF_TOPIC,
+    OPT_EMERG_SHUNT,
+    OPT_SMART_SPEED,
+    OPT_SMART_GATE,
 )
-from .vakio import MqttClient
+from .vakio import MqttClient, Coordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,6 +45,19 @@ PORT_SELECTOR = vol.All(
     vol.Coerce(int),
 )
 PASSWORD_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+GATE_SELECTOR = vol.All(
+    NumberSelector(NumberSelectorConfig(mode=NumberSelectorMode.SLIDER, min=1, max=4)),
+    vol.Coerce(int),
+)
+SPEED_SELECTOR = vol.All(
+    NumberSelector(NumberSelectorConfig(mode=NumberSelectorMode.SLIDER, min=1, max=5)),
+    vol.Coerce(int),
+)
+TEMP_SELECTOR = vol.All(
+    NumberSelector(NumberSelectorConfig(mode=NumberSelectorMode.BOX, min=1, max=15)),
+    vol.Coerce(int),
+)
+
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -92,6 +111,54 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        """Create the options flow."""
+        return OptionsFlow(config_entry)
+
+
+class OptionsFlow(config_entries.OptionsFlow):
+    """Handle a options flow for Vakio Smart Control"""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            coordinator: Coordinator = self.hass.data[DOMAIN][
+                self.config_entry.entry_id
+            ]
+            await coordinator.update_smart_mode(
+                user_input[OPT_EMERG_SHUNT], user_input[OPT_SMART_GATE], user_input[OPT_SMART_SPEED]
+            )
+            return self.async_create_entry(title="Параметры обновлены", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        OPT_EMERG_SHUNT, default=DEFAULT_SMART_EMERG_SHUNT
+                    ): TEMP_SELECTOR,
+                    vol.Required(
+                        OPT_SMART_GATE, default=DEFAULT_SMART_GATE
+                    ): GATE_SELECTOR,
+                    vol.Required(
+                        OPT_SMART_SPEED, default=DEFAULT_SMART_SPEED
+                    ): SPEED_SELECTOR,
+                }
+            ),
+        )
+        # return await self.async_step_smartauto_options()
+
+    # async def async_step_smartauto_options(self, user_input=None):
 
 
 class CannotConnect(HomeAssistantError):
