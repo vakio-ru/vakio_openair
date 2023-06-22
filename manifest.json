@@ -3,11 +3,11 @@
   "name": "Vakio OpenAir",
   "version": "0.0.0",
   "codeowners": [
-    "@Anti-Shperml"
+    "@Anti-Sh"
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/Anti-Shperml/vakio-smart-control/blob/main/README.md",
+  "documentation": "https://github.com/Anti-Sh/vakio-smart-control/blob/dev/README.md",
   "homekit": {},
   "iot_class": "cloud_polling",
   "requirements": [],
