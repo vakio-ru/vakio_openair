@@ -1,13 +1,12 @@
 """123"""
 from __future__ import annotations
 import decimal
-from typing import Any, Optional
+from typing import Any
 from datetime import datetime, timedelta, timezone
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.event import async_track_time_interval
@@ -62,9 +61,10 @@ PRESET_MODS = [
 
 async def async_setup_entry(
     hass: HomeAssistant, conf: ConfigEntry, entities: AddEntitiesCallback
-) -> bool:
+) -> None:
     """Register settings of device."""
-    return await async_setup_platform(hass, conf, entities)
+    await async_setup_platform(hass, conf, entities)
+    return
 
 
 async def async_setup_platform(
@@ -72,21 +72,30 @@ async def async_setup_platform(
     conf: ConfigType,
     entities: AddEntitiesCallback,
     info: DiscoveryInfoType | None = None,
-) -> bool:
+) -> None:
+    """Установка платформы в hass"""
     openair = VakioOpenAirFan(
         hass, "openair1", "OpenAir", conf.entry_id, LIMITED_SUPPORT, PRESET_MODS
     )
     entities([openair])
     coordinator: Coordinator = hass.data[DOMAIN][conf.entry_id]
     await coordinator.async_login()
-    async_track_time_interval(hass, coordinator._async_update, timedelta(seconds=1))
-    async_track_time_interval(hass, openair._async_update, timedelta(seconds=1))
+    async_track_time_interval(
+        hass,
+        coordinator._async_update,  # pylint: disable=protected-access
+        timedelta(seconds=1),
+    )
+    async_track_time_interval(
+        hass,
+        openair._async_update,  # pylint: disable=protected-access
+        timedelta(seconds=1),
+    )
 
     return
 
 
 class VakioOpenAirFanBase(FanEntity):
-    "Base class for VakioOperAirFan"
+    "Base class for VakioOperAirFan."
     _attr_should_poll = False
 
     def __init__(
@@ -99,7 +108,6 @@ class VakioOpenAirFanBase(FanEntity):
         preset_modes: list[str] | None,
         translation_key: str | None = None,
     ) -> None:
-        """Конструктор."""
         self.hass = hass
         self._unique_id = unique_id
         self._attr_supported_features = supported_features
@@ -119,22 +127,22 @@ class VakioOpenAirFanBase(FanEntity):
 
     @property
     def unique_id(self) -> str:
-        """Return unique id"""
+        """Return unique id."""
         return self._unique_id
 
     @property
     def current_direction(self) -> str | None:
-        """Currnt direction of fan"""
+        """Currnt direction of fan."""
         return self._direction
 
     @property
     def oscillating(self) -> bool | None:
-        """Current oscillating"""
+        """Current oscillating."""
         return self._oscillating
 
 
 class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
-    "Status of device in Home Assistant"
+    """Программное представления устройства для связи с hass."""
 
     @property
     def percentage(self) -> int | None:
@@ -156,7 +164,9 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
         """Возвращает все пресеты режимов работы."""
         return self._preset_modes
 
-    async def async_set_percentage(self, percentage: int) -> None:
+    async def async_set_percentage(
+        self, percentage: int  # pylint: disable=redefined-outer-name
+    ) -> None:
         """Установка скорости работы вентиляции в процентах."""
         current_workmode = self.coordinator.get_workmode()
 
@@ -183,7 +193,10 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
             self._preset_mode = preset_mode
         else:
             raise ValueError(f"Неизвестный режим: {preset_mode}")
-        if self._preset_mode in PRESET_MOD_GATES.keys():
+        if (
+            self._preset_mode
+            in PRESET_MOD_GATES.keys()  # pylint: disable=consider-iterating-dictionary
+        ):
             if self.coordinator.get_workmode() == OPENAIR_WORKMODE_SUPERAUTO:
                 await self.coordinator.workmode(OPENAIR_WORKMODE_MANUAL)
             if self._preset_mode != PRESET_MOD_GATE_04:
@@ -198,7 +211,7 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
 
     async def async_turn_on(
         self,
-        percentage: int | None = None,
+        percentage: int | None = None,  # pylint: disable=redefined-outer-name
         preset_mode: str | None = None,
         **kwargs: Any,
     ) -> None:
@@ -254,7 +267,7 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
             return True
 
         speed -= 1
-        named_speed = OPENAIR_SPEED_LIST[speed]
+        named_speed = OPENAIR_SPEED_LIST[speed]  # pylint: disable=redefined-outer-name
         new_speed_percentage = ordered_list_item_to_percentage(
             OPENAIR_SPEED_LIST, named_speed
         )

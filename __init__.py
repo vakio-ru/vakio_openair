@@ -46,16 +46,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     broker = MqttClient(hass, data)
 
-    # Try to connect
+    # Попытка подключения к брокеру
     if not await broker.try_connect():
         raise ConfigEntryAuthFailed(ERROR_AUTH)
 
-    coordinator = Coordinator(hass, data)
+    coordinator: Coordinator = Coordinator(hass, data)
     await coordinator.async_config_entry_first_refresh()
     if not coordinator.last_update_success:
         raise ConfigEntryNotReady(ERROR_CONFIG_NO_TREADY)
 
-    # Registration of integration in HA
+    # Регистрация интеграции в hass
     hass.data[DOMAIN][config_entry.entry_id] = coordinator
     config_entry.add_update_listener(async_reload_entry)
     config_entry.async_on_unload(
@@ -80,7 +80,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     if DOMAIN not in hass.data:
         return True
     if config_entry.entry_id in hass.data[DOMAIN]:
-        coordinator = hass.data[DOMAIN][config_entry.entry_id]
+        # coordinator = hass.data[DOMAIN][config_entry.entry_id]
         unload_ok = all(
             await asyncio.gather(
                 *[

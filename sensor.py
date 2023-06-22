@@ -2,18 +2,15 @@
 from __future__ import annotations
 from datetime import datetime, timedelta
 
-from typing import cast
-
 from .vakio import Coordinator
 from homeassistant.components.sensor import (
-    DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_BATTERY_LEVEL, PERCENTAGE, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
@@ -50,8 +47,16 @@ async def async_setup_platform(
         PERCENTAGE,
     )
     async_add_entities([temp, hud])
-    async_track_time_interval(hass, temp._async_update, timedelta(seconds=30))
-    async_track_time_interval(hass, hud._async_update, timedelta(seconds=30))
+    async_track_time_interval(
+        hass,
+        temp._async_update,  # pylint: disable=protected-access
+        timedelta(seconds=30),
+    )
+    async_track_time_interval(
+        hass,
+        hud._async_update,  # pylint: disable=protected-access
+        timedelta(seconds=30),
+    )
 
 
 async def async_setup_entry(
@@ -59,12 +64,12 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Demo config entry."""
+    """Set up config entry."""
     await async_setup_platform(hass, config_entry, async_add_entities)
 
 
 class VakioSensor(SensorEntity):
-    """Representation of a Demo sensor."""
+    """Реализация сенсора устройства Vakio"""
 
     _attr_should_poll = False
 
@@ -105,22 +110,6 @@ class VakioSensor(SensorEntity):
 
         if battery:
             self._attr_extra_state_attributes = {ATTR_BATTERY_LEVEL: battery}
-
-    # @property
-    # def state(self) -> int:
-    #     if SensorDeviceClass.TEMPERATURE == self._attr_device_class:
-    #         val = self.coordinator.get_temp()
-    #     else:
-    #         val = self.coordinator.get_hud()
-    #     return val if val is not None else 20
-
-    # @property
-    # def native_value(self) -> StateType:
-    #     if SensorDeviceClass.TEMPERATURE == self._attr_device_class:
-    #         val = self.coordinator.get_temp()
-    #     else:
-    #         val = self.coordinator.get_hud()
-    #     return val if val is not None else 20
 
     async def _async_update(self, now: datetime) -> None:
         if SensorDeviceClass.TEMPERATURE == self._attr_device_class:

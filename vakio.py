@@ -5,13 +5,10 @@ import json
 import logging
 import random
 from typing import Any
-import async_timeout
 import paho.mqtt.client as mqtt
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-
-from homeassistant.loader import bind_hass
 
 from .const import (
     DEFAULT_TIMEINTERVAL,
@@ -125,13 +122,14 @@ class MqttClient:
         try:
             self._client.connect(self.data[CONF_HOST], self.data[CONF_PORT])
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             return False
 
     async def subscribe(self) -> None:
+        """Подписка на топики"""
         self.subscribes_count += 1
         async with self._paho_lock:
-            result, mid = await self.hass.async_add_executor_job(
+            _, mid = await self.hass.async_add_executor_job(
                 self._client.subscribe,
                 [(f"{self.data[CONF_TOPIC]}/{endpoint}", 0) for endpoint in ENDPOINTS],
             )
@@ -154,7 +152,7 @@ class MqttClient:
         qos = 0
         retain = True
         async with self._paho_lock:
-            msg_info = await self.hass.async_add_executor_job(
+            await self.hass.async_add_executor_job(
                 self._client.publish, topic, msg, qos, retain
             )
 
@@ -182,6 +180,7 @@ class Coordinator(DataUpdateCoordinator):
         self.is_logged_in = False
 
     async def async_login(self) -> bool:
+        """Авторизация в брокере"""
         if self.is_logged_in is True:
             return True
 
@@ -249,21 +248,23 @@ class Coordinator(DataUpdateCoordinator):
         return self.condition[WORKMODE_ENDPOINT]
 
     def get_temp(self) -> int | bool | None:
+        """Возвращается текущая температура с внутреннего датчика устройства"""
         return self.condition[TEMP_ENDPOINT]
 
     def get_hud(self) -> int | bool | None:
+        """Возвращается текущая влажность с внутреннего датчика устройства"""
         return self.condition[HUD_ENDPOINT]
 
     async def turn_on(self) -> bool:
-        """Turn on the device"""
+        """Включение устройства"""
         return await self.state(OPENAIR_STATE_ON)
 
     async def turn_off(self) -> bool:
-        """Turn off the device"""
+        """Выключение устройства"""
         return await self.state(OPENAIR_STATE_OFF)
 
     def is_on(self) -> bool:
-        """Check is device on"""
+        """Возвращается bool значение \"Включено ли устройство\""""
         current_state = self.get_state()
         return current_state == OPENAIR_STATE_ON
 
