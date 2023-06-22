@@ -20,5 +20,18 @@
                 "description": "Please enter the connection information of your MQTT broker."
             }
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "emerg_shunt": "Shutdown temperature",
+                    "gate": "Gate",
+                    "smart_speed": "Speed"
+                },
+                "description": "Enter the SMART mode parameters (shutdown temperature - the temperature at which the device will be turned off to avoid dew formation)",
+                "title": "Mode SMART"
+            }
+        }
     }
 }

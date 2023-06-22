@@ -1,4 +1,4 @@
-"""Demo platform that has a couple of fake sensors."""
+"""Sensor platform that has a temperature and humidity sensors."""
 from __future__ import annotations
 from datetime import datetime, timedelta
 

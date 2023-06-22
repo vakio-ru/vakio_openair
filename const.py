@@ -1,8 +1,8 @@
-"""Constants for the Vakio Smart Control integration."""
+"""Constants for the Vakio Openair integration."""
 import datetime
 from homeassistant.const import Platform
 
-DOMAIN = "vakio_smart_control"
+DOMAIN = "vakio_openair"
 
 # Platform
 # PLATFORMS = [Platform.SENSOR, Platform.FAN]

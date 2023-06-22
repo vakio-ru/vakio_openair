@@ -1,4 +1,4 @@
-"""The Vakio Smart Control integration."""
+"""The Vakio Openair integration."""
 from __future__ import annotations
 
 import asyncio
@@ -71,11 +71,16 @@ async def config_entry_update_listener(
 ) -> None:
     """Функция вызывается при обновлении конфигурации."""
     await hass.config_entries.async_reload(config_entry.entry_id)
+    return
 
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    await asyncio.gather(
+        hass.config_entries.async_unload_platforms(config_entry, PLATFORMS),
+        return_exceptions=True,
+    )
+
     unload_ok: bool = False
     if DOMAIN not in hass.data:
         return True
@@ -91,6 +96,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
                 ]
             )
         )
+        unload_ok = True
     if unload_ok:
         hass.data[DOMAIN].pop(config_entry.entry_id)
         _LOGGER.debug(
@@ -99,7 +105,8 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
             config_entry.entry_id,
         )
 
-    return unload_ok
+    return True
+    # return unload_ok
 
 
 async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:

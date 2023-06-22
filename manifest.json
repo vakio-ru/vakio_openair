@@ -1,7 +1,7 @@
 {
-  "domain": "vakio_smart_control",
-  "name": "Vakio Smart Control",
-  "version": "0.1.0",
+  "domain": "vakio_openair",
+  "name": "Vakio OpenAir",
+  "version": "0.0.0",
   "codeowners": [
     "@Anti-Shperml"
   ],

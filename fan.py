@@ -1,4 +1,4 @@
-"""123"""
+"""Fan platform."""
 from __future__ import annotations
 import decimal
 from typing import Any
