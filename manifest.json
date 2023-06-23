@@ -7,7 +7,7 @@
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/Anti-Sh/vakio-smart-control/blob/dev/README.md",
+  "documentation": "https://github.com/Anti-Sh/vakio_openair/blob/dev/README.md",
   "homekit": {},
   "iot_class": "cloud_polling",
   "requirements": [],

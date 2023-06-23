@@ -14,7 +14,7 @@
                     "host": "Host",
                     "password": "Password",
                     "port": "Port",
-                    "topic": "topic",
+                    "topic": "Topic",
                     "username": "Username"
                 },
                 "description": "Please enter the connection information of your MQTT broker."
