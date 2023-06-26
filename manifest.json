@@ -1,16 +1,16 @@
 {
   "domain": "vakio_openair",
   "name": "Vakio OpenAir",
-  "version": "0.0.0",
+  "version": "0.1.5",
   "codeowners": [
     "@Anti-Sh"
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/Anti-Sh/vakio_openair/blob/dev/README.md",
+  "documentation": "https://github.com/Anti-Sh/vakio_openair/#readme",
   "homekit": {},
   "iot_class": "cloud_polling",
-  "requirements": [],
+  "requirements": ["paho-mqtt==1.6.1"],
   "ssdp": [],
   "zeroconf": []
 }
