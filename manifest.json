@@ -7,10 +7,10 @@
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/Anti-Sh/vakio_openair/#readme",
+  "documentation": "https://github.com/maxmostovoy/vakio_openair/#readme",
   "homekit": {},
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/Anti-Sh/vakio_atmosphere/issues",
+  "issue_tracker": "https://github.com/maxmostovoy/vakio_atmosphere/issues",
   "requirements": ["paho-mqtt==1.6.1"],
   "ssdp": [],
   "zeroconf": []
