@@ -1,7 +1,6 @@
 {
   "domain": "vakio_openair",
   "name": "Vakio OpenAir",
-  "version": "0.1.5",
   "codeowners": [
     "@Anti-Sh"
   ],
@@ -11,7 +10,10 @@
   "homekit": {},
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/maxmostovoy/vakio_atmosphere/issues",
-  "requirements": ["paho-mqtt==1.6.1"],
+  "requirements": [
+    "paho-mqtt==1.6.1"
+  ],
   "ssdp": [],
+  "version": "0.1.5",
   "zeroconf": []
 }
