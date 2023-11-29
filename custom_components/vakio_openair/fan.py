@@ -74,8 +74,9 @@ async def async_setup_platform(
     info: DiscoveryInfoType | None = None,
 ) -> None:
     """Установка платформы в hass"""
+    topic = conf.data['topic']
     openair = VakioOpenAirFan(
-        hass, "openair1", "OpenAir", conf.entry_id, LIMITED_SUPPORT, PRESET_MODS
+        hass, topic, "OpenAir", conf.entry_id, LIMITED_SUPPORT, PRESET_MODS
     )
     entities([openair])
     coordinator: Coordinator = hass.data[DOMAIN][conf.entry_id]
@@ -285,6 +286,7 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
         """
         current_gate = self.coordinator.get_gate()
         current_workmode = self.coordinator.get_workmode()
+        mode = None
         if current_workmode == OPENAIR_WORKMODE_SUPERAUTO:
             mode = PRESET_MOD_SUPER_AUTO
         else:

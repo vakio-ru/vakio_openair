@@ -26,10 +26,11 @@ async def async_setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Demo sensors."""
+    topic = conf.data['topic']
     temp = VakioSensor(
         hass,
         conf.entry_id,
-        "temp",
+        f"{topic}_temp",
         "OpenAir Temp Sensor",
         0,
         SensorDeviceClass.TEMPERATURE,
@@ -39,7 +40,7 @@ async def async_setup_platform(
     hud = VakioSensor(
         hass,
         conf.entry_id,
-        "hud",
+        f"{topic}_hud",
         "OpenAir Humidity Sensor",
         0,
         SensorDeviceClass.HUMIDITY,
