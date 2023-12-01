@@ -1,31 +1,32 @@
 """Fan platform."""
 from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
 import decimal
 from typing import Any
-from datetime import datetime, timedelta, timezone
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
 )
 
-from .vakio import Coordinator
 from .const import (
     DOMAIN,
+    OPENAIR_GATE_LIST,
+    OPENAIR_SPEED_00,
+    OPENAIR_SPEED_01,
+    OPENAIR_SPEED_LIST,
     OPENAIR_STATE_OFF,
     OPENAIR_WORKMODE_MANUAL,
     OPENAIR_WORKMODE_SUPERAUTO,
-    OPENAIR_SPEED_LIST,
-    OPENAIR_SPEED_00,
-    OPENAIR_SPEED_01,
-    OPENAIR_GATE_LIST,
 )
+from .vakio import Coordinator
 
 percentage = ordered_list_item_to_percentage(OPENAIR_SPEED_LIST, OPENAIR_SPEED_01)
 named_speed = percentage_to_ordered_list_item(OPENAIR_SPEED_LIST, 20)
@@ -63,8 +64,7 @@ async def async_setup_entry(
     hass: HomeAssistant, conf: ConfigEntry, entities: AddEntitiesCallback
 ) -> None:
     """Register settings of device."""
-    await async_setup_platform(hass, conf, entities)
-    return
+    await async_setup_platform(hass, conf, entities)  # type: ignore
 
 
 async def async_setup_platform(
@@ -73,13 +73,13 @@ async def async_setup_platform(
     entities: AddEntitiesCallback,
     info: DiscoveryInfoType | None = None,
 ) -> None:
-    """Установка платформы в hass"""
-    topic = conf.data['topic']
+    """Установка платформы в hass."""
+    topic = conf.data["topic"]  # type: ignore
     openair = VakioOpenAirFan(
-        hass, topic, "OpenAir", conf.entry_id, LIMITED_SUPPORT, PRESET_MODS
+        hass, topic, "OpenAir", conf.entry_id, LIMITED_SUPPORT, PRESET_MODS  # type: ignore
     )
     entities([openair])
-    coordinator: Coordinator = hass.data[DOMAIN][conf.entry_id]
+    coordinator: Coordinator = hass.data[DOMAIN][conf.entry_id]  # type: ignore
     await coordinator.async_login()
     async_track_time_interval(
         hass,
@@ -92,11 +92,10 @@ async def async_setup_platform(
         timedelta(seconds=1),
     )
 
-    return
-
 
 class VakioOpenAirFanBase(FanEntity):
-    "Base class for VakioOperAirFan."
+    """Base class for VakioOperAirFan."""
+
     _attr_should_poll = False
 
     def __init__(
@@ -109,6 +108,7 @@ class VakioOpenAirFanBase(FanEntity):
         preset_modes: list[str] | None,
         translation_key: str | None = None,
     ) -> None:
+        """Функция иниципализации."""
         self.hass = hass
         self._unique_id = unique_id
         self._attr_supported_features = supported_features
@@ -183,10 +183,10 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
         await self.coordinator.turn_on()
         # Получение именованой скорости.
         speed: decimal.Decimal = percentage_to_ordered_list_item(
-            OPENAIR_SPEED_LIST, percentage
+            OPENAIR_SPEED_LIST, percentage  # type: ignore
         )
 
-        await self.coordinator.speed(speed)
+        await self.coordinator.speed(speed)  # type: ignore
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Переключение режима работы на основе пресета."""
@@ -196,7 +196,7 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
             raise ValueError(f"Неизвестный режим: {preset_mode}")
         if (
             self._preset_mode
-            in PRESET_MOD_GATES.keys()  # pylint: disable=consider-iterating-dictionary
+            in PRESET_MOD_GATES  # pylint: disable=consider-iterating-dictionary
         ):
             if self.coordinator.get_workmode() == OPENAIR_WORKMODE_SUPERAUTO:
                 await self.coordinator.workmode(OPENAIR_WORKMODE_MANUAL)
@@ -219,23 +219,24 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
         """Включение вентиляционной системы."""
         await self.coordinator.turn_on()
         # Получение именованой скорости.
-        new_speed: decimal.Decimal = 0
+        new_speed: decimal.Decimal = decimal.Decimal(0)
         if percentage is not None:
-            new_speed = percentage_to_ordered_list_item(OPENAIR_SPEED_LIST, percentage)
+            new_speed = percentage_to_ordered_list_item(OPENAIR_SPEED_LIST, percentage)  # type: ignore
         else:
-            new_speed = OPENAIR_SPEED_01
+            new_speed = OPENAIR_SPEED_01  # type: ignore
 
-        await self.coordinator.speed(new_speed)
+        await self.coordinator.speed(new_speed)  # type: ignore
         self.update_all_options()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Выключение устройства."""
         await self.coordinator.turn_off()
-        await self._async_update(datetime.now(timezone.utc))
+        await self._async_update(datetime.now(UTC))
         self.schedule_update_ha_state()
 
     async def _async_update(self, now: datetime) -> None:
-        """
+        """Async Update.
+
         Функция вызывается по таймеру.
         Выполняется сравнение параметров состояния устройства с параметрами записанными в классе.
         Если выявляется разница, тогда параметры класса обновляются.
@@ -251,7 +252,8 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
             self.update_all_options()
 
     def update_speed(self) -> bool:
-        """
+        """Update Speed.
+
         Обновление текущей скорости работы устройства.
         Возвращается "истина" если было выполнено обновление.
         """
@@ -280,7 +282,8 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
         return False
 
     def update_preset_mode(self) -> bool:
-        """
+        """Update Preset Mode.
+
         Обновление текущего предопределённого режима работы вентиляционной системы.
         Возвращается "истина" если было выполнено обновление.
         """
@@ -294,14 +297,15 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
                 if value != current_gate:
                     continue
                 mode = key
-        if mode != self._preset_mode:
+        if "mode" in locals() and mode != self._preset_mode:
             self._preset_mode = mode
             return True
 
         return False
 
     def update_on_off(self) -> bool:
-        """
+        """Update On Off.
+
         Обновление текущего состояния включённости вентиляционной системы.
         Возвращается "истина" если было выполнено обновление.
         """
@@ -309,23 +313,23 @@ class VakioOpenAirFan(VakioOpenAirFanBase, FanEntity):
         if not bool(is_on):
             # Вентиляция выключена.
             if self._percentage is not None and self._percentage > 0:
-                self._percentage = int(0)
+                self._percentage = 0
                 return True
-        else:
+        elif self._percentage is None or self._percentage == 0:
             # Вентиляция включена.
-            if self._percentage is None or self._percentage == 0:
-                if self._percentage is None:
-                    self._percentage = ordered_list_item_to_percentage(
-                        OPENAIR_SPEED_LIST, OPENAIR_SPEED_01
-                    )
-                if self._preset_mode == OPENAIR_STATE_OFF:
-                    self._preset_mode = None
-                return True
+            if self._percentage is None:
+                self._percentage = ordered_list_item_to_percentage(
+                    OPENAIR_SPEED_LIST, OPENAIR_SPEED_01
+                )
+            if self._preset_mode == OPENAIR_STATE_OFF:
+                self._preset_mode = None
+            return True
 
         return False
 
     def update_all_options(self) -> None:
-        """
+        """Update All Options.
+
         Обновление состояния всех индикаторов интеграции в соответствии
         с переключённым режимом работы вентиляционной системы.
         """

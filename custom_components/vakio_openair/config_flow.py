@@ -20,22 +20,22 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
-    DOMAIN,
+    CONF_HOST,
+    CONF_PASSWORD,
+    CONF_PORT,
+    CONF_TOPIC,
+    CONF_USERNAME,
     DEFAULT_PORT,
-    DEFAULT_TOPIC,
+    DEFAULT_SMART_EMERG_SHUNT,
     DEFAULT_SMART_GATE,
     DEFAULT_SMART_SPEED,
-    DEFAULT_SMART_EMERG_SHUNT,
-    CONF_HOST,
-    CONF_PORT,
-    CONF_USERNAME,
-    CONF_PASSWORD,
-    CONF_TOPIC,
+    DEFAULT_TOPIC,
+    DOMAIN,
     OPT_EMERG_SHUNT,
-    OPT_SMART_SPEED,
     OPT_SMART_GATE,
+    OPT_SMART_SPEED,
 )
-from .vakio import MqttClient, Coordinator
+from .vakio import Coordinator, MqttClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,10 +62,10 @@ TEMP_SELECTOR = vol.All(
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): TEXT_SELECTOR,
-        vol.Required(CONF_PORT, default=DEFAULT_PORT): PORT_SELECTOR,
+        vol.Required(CONF_PORT, default=DEFAULT_PORT): PORT_SELECTOR,  # type: ignore
         vol.Optional(CONF_USERNAME): TEXT_SELECTOR,
         vol.Optional(CONF_PASSWORD): PASSWORD_SELECTOR,
-        vol.Required(CONF_TOPIC, default=DEFAULT_TOPIC): TEXT_SELECTOR,
+        vol.Required(CONF_TOPIC, default=DEFAULT_TOPIC): TEXT_SELECTOR,  # type: ignore
     }
 )
 
@@ -122,9 +122,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class OptionsFlow(config_entries.OptionsFlow):
-    """Handle a options flow for Vakio Smart Control"""
+    """Handle a options flow for Vakio Smart Control."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Функция инициализации."""
         self.config_entry = config_entry
 
     async def async_step_init(
@@ -136,7 +137,9 @@ class OptionsFlow(config_entries.OptionsFlow):
                 self.config_entry.entry_id
             ]
             await coordinator.update_smart_mode(
-                user_input[OPT_EMERG_SHUNT], user_input[OPT_SMART_GATE], user_input[OPT_SMART_SPEED]
+                user_input[OPT_EMERG_SHUNT],
+                user_input[OPT_SMART_GATE],
+                user_input[OPT_SMART_SPEED],
             )
             return self.async_create_entry(title="Параметры обновлены", data=user_input)
 
@@ -145,13 +148,13 @@ class OptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        OPT_EMERG_SHUNT, default=DEFAULT_SMART_EMERG_SHUNT
+                        OPT_EMERG_SHUNT, default=DEFAULT_SMART_EMERG_SHUNT  # type: ignore
                     ): TEMP_SELECTOR,
                     vol.Required(
-                        OPT_SMART_GATE, default=DEFAULT_SMART_GATE
+                        OPT_SMART_GATE, default=DEFAULT_SMART_GATE  # type: ignore
                     ): GATE_SELECTOR,
                     vol.Required(
-                        OPT_SMART_SPEED, default=DEFAULT_SMART_SPEED
+                        OPT_SMART_SPEED, default=DEFAULT_SMART_SPEED  # type: ignore
                     ): SPEED_SELECTOR,
                 }
             ),

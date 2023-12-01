@@ -1,8 +1,8 @@
 """Sensor platform that has a temperature and humidity sensors."""
 from __future__ import annotations
+
 from datetime import datetime, timedelta
 
-from .vakio import Coordinator
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -17,6 +17,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, StateType
 
 from . import DOMAIN
+from .vakio import Coordinator
 
 
 async def async_setup_platform(
@@ -26,10 +27,10 @@ async def async_setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Demo sensors."""
-    topic = conf.data['topic']
+    topic = conf.data["topic"]  # type: ignore
     temp = VakioSensor(
         hass,
-        conf.entry_id,
+        conf.entry_id,  # type: ignore
         f"{topic}_temp",
         "OpenAir Temp Sensor",
         0,
@@ -39,7 +40,7 @@ async def async_setup_platform(
     )
     hud = VakioSensor(
         hass,
-        conf.entry_id,
+        conf.entry_id,  # type: ignore
         f"{topic}_hud",
         "OpenAir Humidity Sensor",
         0,
@@ -66,11 +67,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up config entry."""
-    await async_setup_platform(hass, config_entry, async_add_entities)
+    await async_setup_platform(hass, config_entry, async_add_entities)  # type: ignore
 
 
 class VakioSensor(SensorEntity):
-    """Реализация сенсора устройства Vakio"""
+    """Реализация сенсора устройства Vakio."""
 
     _attr_should_poll = False
 
@@ -113,7 +114,7 @@ class VakioSensor(SensorEntity):
             self._attr_extra_state_attributes = {ATTR_BATTERY_LEVEL: battery}
 
     async def _async_update(self, now: datetime) -> None:
-        if SensorDeviceClass.TEMPERATURE == self._attr_device_class:
+        if self._attr_device_class == SensorDeviceClass.TEMPERATURE:
             val = self.coordinator.get_temp()
         else:
             val = self.coordinator.get_hud()
