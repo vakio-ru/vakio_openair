@@ -21,6 +21,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up OpenAir sensor devices from a config entry."""
     config = hass.data[DOMAIN][config_entry.entry_id]
+    if len(config) == 0:
+        config = config_entry.data
+
     prefix = config.get(CONF_PREFIX, DEFAULT_PREFIX)
 
     async_add_entities(

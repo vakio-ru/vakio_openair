@@ -37,7 +37,8 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-percentage = ordered_list_item_to_percentage(OPENAIR_SPEED_LIST, OPENAIR_SPEED_01)
+percentage = ordered_list_item_to_percentage(
+    OPENAIR_SPEED_LIST, OPENAIR_SPEED_01)
 named_speed = percentage_to_ordered_list_item(OPENAIR_SPEED_LIST, 20)
 
 FULL_SUPPORT = (
@@ -86,6 +87,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up OpenAir fan device from a config entry."""
     config = hass.data[DOMAIN][config_entry.entry_id]
+    if len(config) == 0:
+        config = config_entry.data
 
     prefix = config.get(CONF_PREFIX, DEFAULT_PREFIX)
     async_add_entities(
