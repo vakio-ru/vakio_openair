@@ -87,3 +87,16 @@ ENDPOINTS = [
 ]
 
 DEFAULT_PREFIX = "vakio"
+
+# JSON protocol (OpenAir Rev2 firmware >= 1.1.0).
+# The device answers every JSON command on "{prefix}/response" and publishes
+# its full state on "device/{prefix}/openair/mode" when it connects.
+RESPONSE_ENDPOINT = "response"
+JSON_COMMAND_TOPIC = "server/{prefix}/openair/mode"
+JSON_STATE_TOPIC = "device/{prefix}/openair/mode"
+JSON_SYSTEM_TOPIC = "device/{prefix}/openair/system"
+JSON_CAPABILITIES = "capabilities"
+JSON_ON_OFF = "on_off"
+JSON_SPEED = "speed"
+JSON_GATE = "gate"
+JSON_MODE = "mode"
